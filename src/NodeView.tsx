@@ -16,7 +16,7 @@ export interface IProps {
     getChildrenName: (item: INode) => any
     node: INode
     level: number
-    onNodePressed?: (item: any) => any
+    onNodePressed?: (item: any, level: number) => any
     renderNode: (item: any, level: number) => any
     renderChildrenNode?: (item: any) => any
     extraData?: any
@@ -75,6 +75,9 @@ const NodeView = React.memo(
 
         // tslint:disable-next-line:variable-name
         const _onNodePressed = () => {
+            if (onNodePressed && onNodePressed(_node, level) === false) {
+                return
+            }
             if (keepOpenedState) {
                 globalActions.setOpenedNode({
                     internalId: _node._internalId,
@@ -86,10 +89,6 @@ const NodeView = React.memo(
                 ..._node,
                 opened: !_node.opened,
             })
-
-            if (onNodePressed) {
-                onNodePressed(_node)
-            }
         }
 
         // tslint:disable-next-line:variable-name

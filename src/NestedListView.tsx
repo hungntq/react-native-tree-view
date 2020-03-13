@@ -1,4 +1,3 @@
-import hashObjectGenerator from 'object-hash'
 import React, {useEffect, useState} from 'react'
 import isEqual from 'react-fast-compare'
 import {StyleSheet, Text, View} from 'react-native'
@@ -25,14 +24,20 @@ export interface IProps {
     data: any
     extraData?: any
     renderNode: (elem: INode, level?: number) => any
-    onNodePressed?: (node?: INode) => void
+    onNodePressed?: (node?: INode, level?: number) => boolean | void
     getChildrenName: (elem: any) => any
     style?: StyleSheet
     keepOpenedState?: boolean
+    key?: (item: INode) => string
 }
 
 export interface IState {
     root: INode
+}
+
+const createId = (node?: INode, key?: (item: INode) => string): string => {
+    if (node && key) { return key(node) }
+    return shortid.generate()
 }
 
 const NestedListView = React.memo(
@@ -43,11 +48,12 @@ const NestedListView = React.memo(
         onNodePressed,
         extraData,
         keepOpenedState,
+        key,
     }: IProps) => {
         const generateIds = (node?: INode) => {
             if (!node) {
                 return {
-                    _internalId: shortid.generate(),
+                    _internalId: createId(node, key),
                 }
             }
 
@@ -57,28 +63,22 @@ const NestedListView = React.memo(
             if (children) {
                 if (!Array.isArray(children)) {
                     children = Object.keys(children).map(
-                        (key: string) => children[key]
+                        (keyString: string) => children[keyString]
                     )
                 }
                 node[childrenName] = children.map((_: INode, index: number) =>
                     generateIds(children[index])
                 )
             }
-            if (node._internalId) {
-                delete node._internalId
-            }
 
-            node._internalId = hashObjectGenerator(node, {
-                algorithm: 'md5',
-                encoding: 'base64',
-            })
+            node._internalId = createId(node, key)
 
             return node
         }
 
         const generateRootNode = (props: IProps): INode => {
             return {
-                _internalId: 'root',
+                _internalId: shortid.generate(),
                 items: props.data
                     ? props.data.map((_: INode, index: number) =>
                           generateIds(props.data[index])
