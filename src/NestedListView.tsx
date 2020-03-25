@@ -23,12 +23,14 @@ const styles = StyleSheet.create({
 export interface IProps {
     data: any
     extraData?: any
-    renderNode: (elem: INode, level?: number) => any
+    renderNode: (elem: INode, level?: number, opened?: boolean) => any
     onNodePressed?: (node?: INode, level?: number) => boolean | void
     getChildrenName: (elem: any) => any
     style?: StyleSheet
     keepOpenedState?: boolean
     key?: (item: INode) => string
+    collapseBrother?: boolean
+    minimumOpenLevel: number
 }
 
 export interface IState {
@@ -42,14 +44,16 @@ const createId = (node?: INode, key?: (item: INode) => string): string => {
 
 const NestedListView = React.memo(
     ({
-        getChildrenName,
-        renderNode,
-        data,
-        onNodePressed,
-        extraData,
-        keepOpenedState,
-        key,
-    }: IProps) => {
+         getChildrenName,
+         renderNode,
+         data,
+         onNodePressed,
+         extraData,
+         keepOpenedState,
+         key,
+         collapseBrother,
+         minimumOpenLevel,
+     }: IProps) => {
         const generateIds = (node?: INode) => {
             if (!node) {
                 return {
@@ -78,7 +82,7 @@ const NestedListView = React.memo(
 
         const generateRootNode = (props: IProps): INode => {
             return {
-                _internalId: shortid.generate(),
+                _internalId: 'root',
                 items: props.data
                     ? props.data.map((_: INode, index: number) =>
                           generateIds(props.data[index])
@@ -147,10 +151,17 @@ const NestedListView = React.memo(
                 renderNode={renderNode}
                 extraData={extraData}
                 keepOpenedState={keepOpenedState}
+                collapseBrother={collapseBrother}
+                minimumOpenLevel={minimumOpenLevel}
             />
         )
     },
     isEqual
 )
+
+// @ts-ignore
+NestedListView.defaultProps = {
+    minimumOpenLevel: 1,
+}
 
 export default NestedListView

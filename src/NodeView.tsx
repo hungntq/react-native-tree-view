@@ -17,10 +17,13 @@ export interface IProps {
     node: INode
     level: number
     onNodePressed?: (item: any, level: number) => any
-    renderNode: (item: any, level: number) => any
+    renderNode: (item: any, level: number, opened: boolean) => any
     renderChildrenNode?: (item: any) => any
     extraData?: any
     keepOpenedState?: boolean
+    parent?: INode
+    collapseBrother?: boolean
+    minimumOpenLevel: number
 }
 
 export interface IState {
@@ -47,14 +50,17 @@ const useGlobal = globalHook(
 
 const NodeView = React.memo(
     ({
-        renderNode,
-        extraData,
-        level,
-        getChildrenName,
-        node,
-        onNodePressed,
-        keepOpenedState,
-    }: IProps) => {
+         renderNode,
+         extraData,
+         level,
+         getChildrenName,
+         node,
+         onNodePressed,
+         keepOpenedState,
+         parent,
+         collapseBrother,
+         minimumOpenLevel,
+     }: IProps) => {
         const [globalState, globalActions]: [any, any] = useGlobal()
 
         // tslint:disable-next-line:variable-name
@@ -74,20 +80,40 @@ const NodeView = React.memo(
         }, [node])
 
         // tslint:disable-next-line:variable-name
+        const _collapseBrother = () => {
+            if (!isNodeOpened) {
+                const items = (parent && parent[getChildrenName(parent)]) || []
+                const { nodesState } = globalState
+                items.forEach((item: any) => {
+                    const { _internalId } = item
+                    if (nodesState[_internalId]) {
+                        globalActions.setOpenedNode({
+                            internalId: _internalId,
+                            opened: false,
+                        })
+                    }
+                })
+            }
+        }
+
+        // tslint:disable-next-line:variable-name
         const _onNodePressed = () => {
+            if (collapseBrother) {
+                _collapseBrother()
+            }
             if (onNodePressed && onNodePressed(_node, level) === false) {
                 return
             }
             if (keepOpenedState) {
                 globalActions.setOpenedNode({
                     internalId: _node._internalId,
-                    opened: !_node.opened,
+                    opened: !isNodeOpened,
                 })
             }
 
             setNode({
                 ..._node,
-                opened: !_node.opened,
+                opened: !isNodeOpened,
             })
         }
 
@@ -102,6 +128,9 @@ const NodeView = React.memo(
                     onNodePressed={onNodePressed}
                     renderNode={renderNode}
                     keepOpenedState={keepOpenedState}
+                    parent={_node}
+                    collapseBrother={collapseBrother}
+                    minimumOpenLevel={minimumOpenLevel}
                 />
             )
         }
@@ -113,14 +142,15 @@ const NodeView = React.memo(
         const rootChildren = _node[rootChildrenName]
 
         const isNodeOpened =
-            (keepOpenedState && globalState.nodesState[node._internalId]) ||
-            _node.opened
+            (keepOpenedState && globalState.nodesState[node._internalId])
+            // || _node.opened
+            || level <= minimumOpenLevel
 
         return (
             <>
                 {!_node.hidden ? (
                     <TouchableWithoutFeedback onPress={_onNodePressed}>
-                        <View>{renderNode(_node, level)}</View>
+                        <View>{renderNode(_node, level, isNodeOpened)}</View>
                     </TouchableWithoutFeedback>
                 ) : null}
                 {isNodeOpened && rootChildren ? (
